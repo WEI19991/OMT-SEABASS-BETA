@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>OMT Beta · 鱸魚投餵換算工具</title>
+<title>OMT Beta · Sea Bass Feeding Calculator</title>
 <style>
   :root {
     --blue:#185FA5; --blue-light:#EBF3FB; --blue-mid:#378ADD;
@@ -22,6 +22,12 @@
   .header p  { font-size:11px; opacity:.75; margin-top:3px; }
   .beta-tag { font-size:10px; font-weight:700; background:rgba(255,255,255,.2);
               padding:2px 8px; border-radius:10px; letter-spacing:.05em; }
+  .lang-bar { display:flex; justify-content:flex-end; align-items:center; gap:4px;
+              background:var(--blue); padding:4px 16px 8px; }
+  .lang-btn { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;
+              border:1.5px solid rgba(255,255,255,.4); background:transparent; color:rgba(255,255,255,.7);
+              cursor:pointer; font-family:var(--font); letter-spacing:.03em; }
+  .lang-btn.active { background:rgba(255,255,255,.25); color:#fff; border-color:rgba(255,255,255,.8); }
   .tab-bar { display:flex; background:#fff; border-bottom:1px solid var(--border); }
   .tab-btn { flex:1; padding:11px 4px; font-size:12px; font-weight:500;
              border:none; background:transparent; cursor:pointer; color:var(--text2);
@@ -58,10 +64,8 @@
          padding:11px 18px; border-radius:8px; font-size:13px; font-weight:600;
          cursor:pointer; border:none; font-family:var(--font); width:100%; margin-top:8px; }
   .btn-primary { background:var(--blue); color:#fff; }
-  .btn-ghost   { background:transparent; color:var(--text2); border:1.5px solid var(--border); }
   .divider { height:1px; background:var(--border); margin:12px 0; }
   .hint { font-size:11px; color:var(--text2); line-height:1.6; }
-  .tag { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; }
   .week-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
   .week-display { font-size:22px; font-weight:700; color:var(--blue); min-width:48px; }
   .week-slider { flex:1; -webkit-appearance:none; height:6px; border-radius:3px;
@@ -101,116 +105,122 @@
 </style>
 </head>
 <body>
+
 <div class="header">
   <div class="header-top">
     <div>
-      <h1>🐟 鱸魚投餵換算工具</h1>
+      <h1 id="hdr-title">🐟 鱸魚投餵換算工具</h1>
       <p>ONE MILLION TON SMART SOLUTION</p>
     </div>
     <span class="beta-tag">OMT BETA</span>
   </div>
+  <div class="lang-bar">
+    <button class="lang-btn active" onclick="setLang('zh')">中文</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('th')">TH</button>
+  </div>
 </div>
+
 <div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('calc',this)">📱 本週換算</button>
-  <button class="tab-btn" onclick="switchTab('fish',this)">🐠 魚體驗算</button>
-  <button class="tab-btn" onclick="switchTab('table',this)">📊 速查表</button>
-  <button class="tab-btn" onclick="switchTab('guide',this)">📋 說明</button>
+  <button class="tab-btn active" id="tab-calc" onclick="switchTab('calc',this)">📱 本週換算</button>
+  <button class="tab-btn" id="tab-fish" onclick="switchTab('fish',this)">🐠 魚體驗算</button>
+  <button class="tab-btn" id="tab-table" onclick="switchTab('table',this)">📊 速查表</button>
+  <button class="tab-btn" id="tab-guide" onclick="switchTab('guide',this)">📋 說明</button>
 </div>
+
 <!-- ══ PAGE 1：本週換算 ══════════════════════════════════════════ -->
 <div id="page-calc" class="page active">
   <div class="card">
-    <div class="card-title">基本設定 <span class="card-sub">每批次填一次</span></div>
+    <div class="card-title"><span id="lbl-settings">基本設定</span> <span class="card-sub" id="lbl-once">每批次填一次</span></div>
     <div class="row2">
       <div class="input-group">
-        <label class="input-label">下苗量（尾）</label>
+        <label class="input-label" id="lbl-stocked">下苗量（尾）</label>
         <input class="input-field" id="stocked" type="number" inputmode="numeric" value="75000">
       </div>
       <div class="input-group">
-        <label class="input-label">每包重量（kg）</label>
+        <label class="input-label" id="lbl-pkgkg">每包重量（kg）</label>
         <input class="input-field" id="pkgkg" type="number" inputmode="numeric" value="20">
       </div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">選擇週次</div>
+    <div class="card-title" id="lbl-week-title">選擇週次</div>
     <div class="week-row">
       <span class="week-display" id="weekDisplay">W8</span>
       <input type="range" class="week-slider" id="weekSlider" min="1" max="26" value="8"
              oninput="document.getElementById('weekDisplay').textContent='W'+this.value">
     </div>
     <div class="week-marks">
-      <span>W1<br><span style="font-size:9px">放苗</span></span>
-      <span>W7<br><span style="font-size:9px">換04料</span></span>
-      <span>W12<br><span style="font-size:9px">換05料</span></span>
-      <span>W18<br><span style="font-size:9px">換06料</span></span>
-      <span>W26<br><span style="font-size:9px">收成</span></span>
+      <span>W1<br><span id="wm-stock" style="font-size:9px">放苗</span></span>
+      <span>W7<br><span id="wm-f4" style="font-size:9px">換04料</span></span>
+      <span>W12<br><span id="wm-f5" style="font-size:9px">換05料</span></span>
+      <span>W18<br><span id="wm-f6" style="font-size:9px">換06料</span></span>
+      <span>W26<br><span id="wm-harvest" style="font-size:9px">收成</span></span>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">本週投餵換算</div>
+    <div class="card-title" id="lbl-calc-title">本週投餵換算</div>
     <div class="row2">
       <div class="input-group">
-        <label class="input-label">估計存活率（%）</label>
-        <input class="input-field" id="survRate" type="number" inputmode="numeric"
-               placeholder="例：60" value="60">
+        <label class="input-label" id="lbl-surv">估計存活率（%）</label>
+        <input class="input-field" id="survRate" type="number" inputmode="numeric" placeholder="例：60" value="60">
       </div>
       <div class="input-group">
-        <label class="input-label">本週實際投幾包（選填）</label>
-        <input class="input-field" id="actualPacks" type="number" inputmode="numeric"
-               placeholder="填入後自動分析">
+        <label class="input-label" id="lbl-actual">本週實際投幾包（選填）</label>
+        <input class="input-field" id="actualPacks" type="number" inputmode="numeric" placeholder="填入後自動分析">
       </div>
     </div>
-    <button type="button" class="btn btn-primary" onclick="calcMain()">計算本週投餵量</button>
+    <button type="button" class="btn btn-primary" id="btn-calc" onclick="calcMain()">計算本週投餵量</button>
     <div id="calcResult" style="margin-top:8px"></div>
   </div>
 </div>
+
 <!-- ══ PAGE 2：魚體驗算 ══════════════════════════════════════════ -->
 <div id="page-fish" class="page">
-  <div class="notice-box">
+  <div class="notice-box" id="fish-notice">
     📌 輸入當週魚體均重，系統驗算你的投料率是否符合指引，並確認換料時機是否正確。
   </div>
   <div class="card" style="margin-top:10px">
-    <div class="card-title">魚體與投餵資訊</div>
+    <div class="card-title" id="lbl-fish-title">魚體與投餵資訊</div>
     <div class="row2">
       <div class="input-group">
-        <label class="input-label">下苗量（尾）</label>
+        <label class="input-label" id="lbl-f-stocked">下苗量（尾）</label>
         <input class="input-field" id="f_stocked" type="number" inputmode="numeric" value="75000">
       </div>
       <div class="input-group">
-        <label class="input-label">估計存活率（%）</label>
+        <label class="input-label" id="lbl-f-surv">估計存活率（%）</label>
         <input class="input-field" id="f_surv" type="number" inputmode="numeric" value="60">
       </div>
     </div>
     <div class="row3">
       <div class="input-group">
-        <label class="input-label">當週均重（g）</label>
-        <input class="input-field highlight" id="f_weight" type="number" inputmode="numeric"
-               placeholder="例：250">
+        <label class="input-label" id="lbl-f-weight">當週均重（g）</label>
+        <input class="input-field highlight" id="f_weight" type="number" inputmode="numeric" placeholder="例：250">
       </div>
       <div class="input-group">
-        <label class="input-label">每包重量（kg）</label>
+        <label class="input-label" id="lbl-f-pkgkg">每包重量（kg）</label>
         <input class="input-field" id="f_pkgkg" type="number" inputmode="numeric" value="20">
       </div>
       <div class="input-group">
-        <label class="input-label">本週實際包數</label>
+        <label class="input-label" id="lbl-f-packs">本週實際包數</label>
         <input class="input-field" id="f_packs" type="number" inputmode="numeric" placeholder="幾包">
       </div>
     </div>
-    <button type="button" class="btn btn-primary" onclick="calcFish()">驗算投料率</button>
+    <button type="button" class="btn btn-primary" id="btn-fish" onclick="calcFish()">驗算投料率</button>
     <div id="fishResult" style="margin-top:8px"></div>
   </div>
   <div class="card">
-    <div class="card-title">各料號對應魚體體重</div>
+    <div class="card-title" id="lbl-feedcode-title">各料號對應魚體體重</div>
     <table class="ref-table">
       <thead>
         <tr>
-          <th style="text-align:left">料號</th>
-          <th>魚體範圍</th>
-          <th>建議投料率</th>
-          <th>粒徑</th>
+          <th style="text-align:left" id="th-feedcode">料號</th>
+          <th id="th-fishrange">魚體範圍</th>
+          <th id="th-feedrate">建議投料率</th>
+          <th id="th-pellet">粒徑</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="feedcode-tbody">
         <tr><td>2號料</td><td>10–30g</td><td>4.0–5.0%</td><td>Φ2.0–2.2mm</td></tr>
         <tr><td>3號料</td><td>30–120g</td><td>3.3–3.5%</td><td>Φ3.0–3.2mm</td></tr>
         <tr><td>4號料</td><td>120–270g</td><td>3.3–3.5%</td><td>Φ4.3–4.7mm</td></tr>
@@ -220,28 +230,24 @@
     </table>
   </div>
 </div>
+
 <!-- ══ PAGE 3：速查表 ══════════════════════════════════════════ -->
 <div id="page-table" class="page">
   <div class="card">
-    <div class="card-title">週別建議包數速查表</div>
-    <p class="hint" style="margin-bottom:10px">
-      基準：100,000 尾 · 存活率 100% · 每包 20kg<br>
-      <strong>實際包數 = 表中包數 × 下苗量 × 存活率 ÷ 100,000</strong><br>
-      ⚡ W10–W18 關鍵管控區間 ·
-      <span style="color:var(--amber);font-weight:600">黃字為下限</span> · <span style="color:var(--red);font-weight:600">紅字為上限，不可超過</span>
-    </p>
+    <div class="card-title" id="lbl-table-title">週別建議包數速查表</div>
+    <p class="hint" style="margin-bottom:10px" id="lbl-table-hint"></p>
     <div class="table-wrap">
       <table class="ref-table">
         <thead>
           <tr>
-            <th style="text-align:left">週次</th>
+            <th style="text-align:left" id="th-week">週次</th>
             <th>DOC</th>
-            <th>料號</th>
-            <th>魚體(g)</th>
-            <th>g/尾/週</th>
-            <th style="color:#F5C542">下限包數</th>
-            <th>建議包數</th>
-            <th class="upper-val">上限包數</th>
+            <th id="th-feed">料號</th>
+            <th id="th-fish">魚體(g)</th>
+            <th id="th-gfw">g/尾/週</th>
+            <th id="th-min" style="color:#F5C542">下限包數</th>
+            <th id="th-rec">建議包數</th>
+            <th id="th-max" class="upper-val">上限包數</th>
           </tr>
         </thead>
         <tbody id="refTbody"></tbody>
@@ -249,64 +255,59 @@
     </div>
   </div>
 </div>
+
 <!-- ══ PAGE 4：說明 ══════════════════════════════════════════════ -->
 <div id="page-guide" class="page">
   <div class="card">
-    <div class="card-title">換算公式</div>
-    <div class="formula">建議包數 = g/尾/週 × 下苗量 × 存活率 ÷ 每包克數</div>
-    <div class="formula">上限包數 = 指引上限 × 下苗量 × 存活率 ÷ 100,000</div>
-    <div class="formula">投料率% = 每日投餵量(kg) ÷ 池中生物量(kg) × 100</div>
-    <div class="formula">池中生物量 = 下苗量 × 存活率 × 當週均重(g) ÷ 1,000,000</div>
+    <div class="card-title" id="lbl-formula-title">換算公式</div>
+    <div class="formula" id="f1"></div>
+    <div class="formula" id="f2"></div>
+    <div class="formula" id="f3"></div>
+    <div class="formula" id="f4"></div>
   </div>
   <div class="card">
-    <div class="card-title">使用步驟</div>
+    <div class="card-title" id="lbl-steps-title">使用步驟</div>
     <div class="step-item">
       <div class="step-num" style="background:#E2EFDA;color:#375623">1</div>
-      <div class="step-text">填入下苗量、每包重量、估計存活率</div>
+      <div class="step-text" id="s1"></div>
     </div>
     <div class="step-item">
       <div class="step-num" style="background:#E2EFDA;color:#375623">2</div>
-      <div class="step-text">拉動週次滑桿，工具自動算出本週建議包數與上限</div>
+      <div class="step-text" id="s2"></div>
     </div>
     <div class="step-item">
       <div class="step-num" style="background:var(--blue-light);color:var(--blue)">3</div>
-      <div class="step-text">填入本週實際包數，工具反推推估存活率，確認與預估是否接近</div>
+      <div class="step-text" id="s3"></div>
     </div>
     <div class="step-item">
       <div class="step-num" style="background:var(--blue-light);color:var(--blue)">4</div>
-      <div class="step-text">切換到「魚體驗算」，輸入當週均重，確認投料率與換料時機</div>
+      <div class="step-text" id="s4"></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">活存率反推說明</div>
-    <p class="hint" style="line-height:1.8">
-      · 反推公式：<strong>推估存活尾數 = 實際包數 × 每包克數 ÷ g/尾/週</strong><br>
-      · 前提假設：魚已將飼料全部吃完，無剩料。<br>
-      · 若投餵量明顯超過建議值，反推的存活率會被高估。<br>
-      · 建議以 W5–W8 連續數週的平均值來判斷，比單週更準確。<br>
-      · Beta 版不支援記錄儲存，完整追蹤功能請等待 OMT 正式版。
-    </p>
+    <div class="card-title" id="lbl-backcalc-title">活存率反推說明</div>
+    <p class="hint" style="line-height:1.8" id="lbl-backcalc-body"></p>
   </div>
   <div class="card">
-    <div class="card-title">⚠ 重要提醒</div>
+    <div class="card-title" id="lbl-warn-title">⚠ 重要提醒</div>
     <div class="step-item">
       <div class="step-num" style="background:var(--red-light);color:var(--red)">!</div>
-      <div class="step-text"><strong>上限是硬上限</strong>，超過即停止，不管魚是否繼續攝食。</div>
+      <div class="step-text" id="w1"></div>
     </div>
     <div class="step-item">
       <div class="step-num" style="background:var(--amber-light);color:var(--amber)">!</div>
-      <div class="step-text">換料週（W2、W7、W12、W18）投餵量正常略降，屬換料過渡現象。</div>
+      <div class="step-text" id="w2"></div>
     </div>
     <div class="step-item">
       <div class="step-num" style="background:var(--green-light);color:var(--green)">i</div>
-      <div class="step-text">FCR 受水質、鹽度、密度、魚苗品質等多重因素影響，投餵管理只是其中一環。</div>
+      <div class="step-text" id="w3"></div>
     </div>
-    <p class="hint" style="margin-top:8px">本工具為 OMT Beta 版，數據不支援雲端儲存。如有疑問請聯絡您的技術服務代表。</p>
+    <p class="hint" style="margin-top:8px" id="lbl-hint-bottom"></p>
   </div>
 </div>
 
 <div class="visitor-bar">
-  🐟 OMT Beta · <span class="vc-count" id="vc-num">—</span> 次使用紀錄
+  🐟 OMT Beta · <span class="vc-count" id="vc-num">—</span> <span id="lbl-visits">次使用紀錄</span>
 </div>
 
 <script>
@@ -339,19 +340,296 @@ const GUIDE = [
   [240, 320, 50.0, '169–175', '6號料',       '675–710g'],
   [240, 320, 50.0, '176–180', '6號料',       '710–745g'],
 ];
-const FEED_RATE = {
-  '2號料':      [4.0, 5.0],
-  '3號料':      [3.3, 3.5],
-  '4號料':      [3.3, 3.5],
-  '5號料':      [1.8, 2.0],
-  '6號料':      [1.3, 1.5],
-  '2號料+3號料':[3.3, 5.0],
-  '4號料+5號料':[1.8, 3.5],
-  '5號料+6號料':[1.3, 2.0],
-};
 const BASE = 100000;
 const BASE_PKG_G = 20000;
 
+// ── 多語系 ────────────────────────────────────────────────────────
+const LANG = {
+  zh: {
+    title: '🐟 鱸魚投餵換算工具',
+    tab_calc: '📱 本週換算', tab_fish: '🐠 魚體驗算',
+    tab_table: '📊 速查表', tab_guide: '📋 說明',
+    lbl_settings: '基本設定', lbl_once: '每批次填一次',
+    lbl_stocked: '下苗量（尾）', lbl_pkgkg: '每包重量（kg）',
+    lbl_week_title: '選擇週次',
+    wm_stock: '放苗', wm_f4: '換04料', wm_f5: '換05料', wm_f6: '換06料', wm_harvest: '收成',
+    lbl_calc_title: '本週投餵換算',
+    lbl_surv: '估計存活率（%）', lbl_actual: '本週實際投幾包（選填）',
+    btn_calc: '計算本週投餵量',
+    fish_notice: '📌 輸入當週魚體均重，系統驗算你的投料率是否符合指引，並確認換料時機是否正確。',
+    lbl_fish_title: '魚體與投餵資訊',
+    lbl_f_stocked: '下苗量（尾）', lbl_f_surv: '估計存活率（%）',
+    lbl_f_weight: '當週均重（g）', lbl_f_pkgkg: '每包重量（kg）', lbl_f_packs: '本週實際包數',
+    btn_fish: '驗算投料率',
+    lbl_feedcode_title: '各料號對應魚體體重',
+    th_feedcode: '料號', th_fishrange: '魚體範圍', th_feedrate: '建議投料率', th_pellet: '粒徑',
+    lbl_table_title: '週別建議包數速查表',
+    lbl_table_hint: '基準：100,000 尾 · 存活率 100% · 每包 20kg<br><strong>實際包數 = 表中包數 × 下苗量 × 存活率 ÷ 100,000</strong><br>⚡ W10–W18 關鍵管控區間 · <span style="color:var(--amber);font-weight:600">黃字為下限</span> · <span style="color:var(--red);font-weight:600">紅字為上限，不可超過</span>',
+    th_week: '週次', th_feed: '料號', th_fish: '魚體(g)', th_gfw: 'g/尾/週',
+    th_min: '下限包數', th_rec: '建議包數', th_max: '上限包數',
+    lbl_formula_title: '換算公式',
+    f1: '建議包數 = g/尾/週 × 下苗量 × 存活率 ÷ 每包克數',
+    f2: '上限包數 = 指引上限 × 下苗量 × 存活率 ÷ 100,000',
+    f3: '投料率% = 每日投餵量(kg) ÷ 池中生物量(kg) × 100',
+    f4: '池中生物量 = 下苗量 × 存活率 × 當週均重(g) ÷ 1,000,000',
+    lbl_steps_title: '使用步驟',
+    s1: '填入下苗量、每包重量、估計存活率',
+    s2: '拉動週次滑桿，工具自動算出本週建議包數與上限',
+    s3: '填入本週實際包數，工具反推推估存活率，確認與預估是否接近',
+    s4: '切換到「魚體驗算」，輸入當週均重，確認投料率與換料時機',
+    lbl_backcalc_title: '活存率反推說明',
+    lbl_backcalc_body: '· 反推公式：<strong>推估存活尾數 = 實際包數 × 每包克數 ÷ g/尾/週</strong><br>· 前提假設：魚已將飼料全部吃完，無剩料。<br>· 若投餵量明顯超過建議值，反推的存活率會被高估。<br>· 建議以 W5–W8 連續數週的平均值來判斷，比單週更準確。<br>· Beta 版不支援記錄儲存，完整追蹤功能請等待 OMT 正式版。',
+    lbl_warn_title: '⚠ 重要提醒',
+    w1: '<strong>上限是硬上限</strong>，超過即停止，不管魚是否繼續攝食。',
+    w2: '換料週（W2、W7、W12、W18）投餵量正常略降，屬換料過渡現象。',
+    w3: 'FCR 受水質、鹽度、密度、魚苗品質等多重因素影響，投餵管理只是其中一環。',
+    lbl_hint_bottom: '本工具為 OMT Beta 版，數據不支援雲端儲存。如有疑問請聯絡您的技術服務代表。',
+    lbl_visits: '次使用紀錄',
+    ph_surv: '例：60', ph_actual: '填入後自動分析', ph_weight: '例：250', ph_packs: '幾包',
+    feed_name: {'2號料':'2號料','3號料':'3號料','4號料':'4號料','5號料':'5號料','6號料':'6號料',
+                '2號料+3號料':'2號料+3號料','3號料+4號料':'3號料+4號料',
+                '4號料+5號料':'4號料+5號料','5號料+6號料':'5號料+6號料'},
+    feedcode_rows: [
+      ['2號料','10–30g','4.0–5.0%','Φ2.0–2.2mm'],['3號料','30–120g','3.3–3.5%','Φ3.0–3.2mm'],
+      ['4號料','120–270g','3.3–3.5%','Φ4.3–4.7mm'],['5號料','250–450g','1.8–2.0%','Φ6.3–6.7mm'],
+      ['6號料','450–700g','1.3–1.5%','Φ8.8–9.2mm'],
+    ],
+    // dynamic
+    r_min: (w) => `W${w} 下限包數`, r_min_sub: '低於此數需確認',
+    r_rec: (w) => `W${w} 建議包數`, r_max: (w) => `W${w} 上限包數`, r_max_sub: '不可超過此數',
+    r_backsuv: '反推存活率', r_backsuv_est: (s,d) => `預估 ${s}%（${d}）`,
+    r_nextweek: (w) => `下週（W${w}）建議`, r_nextweek_sub: (mn,mx) => `下限 ${mn}　上限 ${mx}`,
+    a_over_title: (a,mx) => `🚫 <strong>本週超過上限（${a} 包 &gt; ${mx} 包）</strong>`,
+    a_over_body: (s) => `可能原因，請現場確認：<br>&nbsp;&nbsp;① 實際存活魚數比預估多（存活率高於 ${s}%）<br>&nbsp;&nbsp;② 投餵過量，魚已超出實際需求<br>若確認是①，請調高存活率重新計算；若是②，下週主動降回建議包數。`,
+    a_high: (a,r,mx) => `⚠ 本週 ${a} 包，高於建議 ${r} 包，仍在上限 ${mx} 包內。<br>可能原因：① 實際魚數略多於預估　② 魚攝食旺盛（水溫適合、換料適應良好）<br>留意是否有剩料沉底，若無剩料則屬正常。`,
+    a_low_title: (a,mn) => `⚠ <strong>本週低於下限（${a} 包 &lt; ${mn} 包）</strong>`,
+    a_low_body: '可能原因，請現場確認：<br>&nbsp;&nbsp;① 天氣不佳、水質異常導致停餵或減餵<br>&nbsp;&nbsp;② 實際存活魚數比預估少（死魚較多）<br>&nbsp;&nbsp;③ 換料週過渡期，屬正常現象（W2、W7、W12、W18）<br>若非以上原因，建議聯絡技術服務代表確認。',
+    a_ok: (a,mn,mx,sv,d,nr) => `✓ 本週投餵正常（${a} 包，下限 ${mn}～上限 ${mx}）<br>反推存活率 ${sv}%，與預估差距 ${d}，下週建議 ${nr} 包。`,
+    a_critical: (w,mn,mx) => `⚡ W${w} 為關鍵管控週次，請嚴守下限 ${mn}、上限 ${mx} 包。填入實際包數可反推存活率。`,
+    a_normal: (mn,r,mx,sv) => `本週 <strong>下限 ${mn} 包、建議 ${r} 包、上限 ${mx} 包</strong>（以預估存活率 ${sv}% 換算）。填入實際包數可反推存活率。`,
+    f_biomass: '池中生物量', f_biomass_sub: (n,w) => `公噸（${n}k尾 × ${w}g）`,
+    f_recpacks: '建議週投包數', f_feedcode: '應使用料號', f_feedcode_sub: (w) => `依均重 ${w}g 判斷`,
+    f_ratelbll: (r,mn,mx) => `實際投料率：<strong style="color:${r.c}">${r.v.toFixed(2)}%</strong>　建議：${mn}–${mx}%`,
+    f_low: (v,mn) => `投料率偏低（${v}%），低於建議下限 ${mn}%，確認是否有停餵天數或魚群攝食異常。`,
+    f_high: (v,mx) => `投料率偏高（${v}%），超過建議上限 ${mx}%×1.15，本週可能過量，建議下週降量。`,
+    f_slhigh: (v,mx) => `投料率略高（${v}%），超出建議上限 ${mx}%，但仍在可接受範圍，留意殘餌。`,
+    f_ok: (v,mn,mx) => `投料率正常（${v}%），符合 ${mn}–${mx}% 建議範圍。`,
+    f_noweight: '請填入當週魚體均重（g）',
+  },
+
+  en: {
+    title: '🐟 Sea Bass Feeding Calculator',
+    tab_calc: '📱 Weekly Calc', tab_fish: '🐠 Fish Check',
+    tab_table: '📊 Quick Ref', tab_guide: '📋 Guide',
+    lbl_settings: 'Basic Settings', lbl_once: 'Fill once per batch',
+    lbl_stocked: 'Stocked (fish)', lbl_pkgkg: 'Bag weight (kg)',
+    lbl_week_title: 'Select Week',
+    wm_stock: 'Stock', wm_f4: 'Feed 4', wm_f5: 'Feed 5', wm_f6: 'Feed 6', wm_harvest: 'Harvest',
+    lbl_calc_title: 'Weekly Feed Calculation',
+    lbl_surv: 'Est. Survival Rate (%)', lbl_actual: 'Actual bags this week (optional)',
+    btn_calc: 'Calculate Weekly Feed',
+    fish_notice: '📌 Enter average fish weight. System verifies feed rate and checks feed change timing.',
+    lbl_fish_title: 'Fish & Feed Info',
+    lbl_f_stocked: 'Stocked (fish)', lbl_f_surv: 'Est. Survival Rate (%)',
+    lbl_f_weight: 'Avg. Weight This Week (g)', lbl_f_pkgkg: 'Bag Weight (kg)', lbl_f_packs: 'Actual Bags This Week',
+    btn_fish: 'Verify Feed Rate',
+    lbl_feedcode_title: 'Feed No. by Fish Weight',
+    th_feedcode: 'Feed No.', th_fishrange: 'Fish Range', th_feedrate: 'Rec. Feed Rate', th_pellet: 'Pellet Size',
+    lbl_table_title: 'Weekly Bag Reference Table',
+    lbl_table_hint: 'Base: 100,000 fish · 100% survival · 20kg/bag<br><strong>Actual bags = table bags × stock × survival ÷ 100,000</strong><br>⚡ W10–W18 critical zone · <span style="color:var(--amber);font-weight:600">Yellow = min</span> · <span style="color:var(--red);font-weight:600">Red = max, do not exceed</span>',
+    th_week: 'Week', th_feed: 'Feed No.', th_fish: 'Fish (g)', th_gfw: 'g/fish/wk',
+    th_min: 'Min Bags', th_rec: 'Rec. Bags', th_max: 'Max Bags',
+    lbl_formula_title: 'Formulas',
+    f1: 'Rec. Bags = g/fish/wk × stock × survival ÷ bag weight (g)',
+    f2: 'Max Bags = guide max × stock × survival ÷ 100,000',
+    f3: 'Feed Rate % = daily feed (kg) ÷ biomass (kg) × 100',
+    f4: 'Biomass = stock × survival × avg. weight (g) ÷ 1,000,000',
+    lbl_steps_title: 'How to Use',
+    s1: 'Enter stocked count, bag weight, and estimated survival rate.',
+    s2: 'Drag the week slider — tool calculates recommended and max bags.',
+    s3: 'Enter actual bags to back-calculate survival rate and compare with estimate.',
+    s4: 'Switch to Fish Check, enter avg. weight to verify feed rate and feed change timing.',
+    lbl_backcalc_title: 'Survival Back-Calculation',
+    lbl_backcalc_body: '· Formula: <strong>Est. live fish = actual bags × bag weight (g) ÷ g/fish/wk</strong><br>· Assumes fish fully consumed all feed with no leftovers.<br>· If feed exceeds guidelines, back-calculated survival will be overestimated.<br>· Use W5–W8 multi-week averages for more accurate estimates.<br>· Beta version does not support data storage. Full tracking in OMT official release.',
+    lbl_warn_title: '⚠ Important Reminders',
+    w1: '<strong>Max is a hard limit.</strong> Stop feeding regardless of fish appetite.',
+    w2: 'Feed change weeks (W2, W7, W12, W18): a slight drop in feed is normal.',
+    w3: 'FCR is affected by water quality, salinity, density, and seed quality. Feed management is only one factor.',
+    lbl_hint_bottom: 'This is OMT Beta. Data is not stored in the cloud. Contact your technical representative for questions.',
+    lbl_visits: 'sessions recorded',
+    ph_surv: 'e.g. 60', ph_actual: 'Auto-analysis after input', ph_weight: 'e.g. 250', ph_packs: 'No. of bags',
+    feed_name: {'2號料':'Feed 2','3號料':'Feed 3','4號料':'Feed 4','5號料':'Feed 5','6號料':'Feed 6',
+                '2號料+3號料':'Feed 2+3','3號料+4號料':'Feed 3+4',
+                '4號料+5號料':'Feed 4+5','5號料+6號料':'Feed 5+6'},
+    feedcode_rows: [
+      ['Feed 2','10–30g','4.0–5.0%','Φ2.0–2.2mm'],['Feed 3','30–120g','3.3–3.5%','Φ3.0–3.2mm'],
+      ['Feed 4','120–270g','3.3–3.5%','Φ4.3–4.7mm'],['Feed 5','250–450g','1.8–2.0%','Φ6.3–6.7mm'],
+      ['Feed 6','450–700g','1.3–1.5%','Φ8.8–9.2mm'],
+    ],
+    r_min: (w) => `W${w} Min Bags`, r_min_sub: 'Confirm if below this',
+    r_rec: (w) => `W${w} Rec. Bags`, r_max: (w) => `W${w} Max Bags`, r_max_sub: 'Do not exceed',
+    r_backsuv: 'Back-calc Survival', r_backsuv_est: (s,d) => `Est. ${s}% (${d})`,
+    r_nextweek: (w) => `Next (W${w}) Rec.`, r_nextweek_sub: (mn,mx) => `Min ${mn}  Max ${mx}`,
+    a_over_title: (a,mx) => `🚫 <strong>Exceeded max this week (${a} bags &gt; ${mx})</strong>`,
+    a_over_body: (s) => `Please check on-site:<br>&nbsp;&nbsp;① More fish survived than estimated (survival > ${s}%)<br>&nbsp;&nbsp;② Overfeeding — fish do not need this amount<br>If ①, raise survival rate and recalculate. If ②, reduce next week.`,
+    a_high: (a,r,mx) => `⚠ ${a} bags this week, above rec. ${r} bags, still within max ${mx}.<br>Possible: ① More fish than estimated ② Strong appetite (good temp / feed transition)<br>Check for leftover feed. Normal if none.`,
+    a_low_title: (a,mn) => `⚠ <strong>Below min this week (${a} bags &lt; ${mn})</strong>`,
+    a_low_body: 'Please check on-site:<br>&nbsp;&nbsp;① Bad weather / water issues caused feeding reduction<br>&nbsp;&nbsp;② Fewer fish survived than estimated<br>&nbsp;&nbsp;③ Feed change week transition (W2, W7, W12, W18) — normal<br>Contact technical representative if none of the above.',
+    a_ok: (a,mn,mx,sv,d,nr) => `✓ Normal this week (${a} bags, min ${mn} – max ${mx})<br>Back-calc survival ${sv}%, diff ${d}, next week rec. ${nr} bags.`,
+    a_critical: (w,mn,mx) => `⚡ W${w} is a critical control week. Stay within min ${mn} – max ${mx} bags. Enter actual bags to back-calculate survival.`,
+    a_normal: (mn,r,mx,sv) => `This week: <strong>min ${mn}, rec. ${r}, max ${mx} bags</strong> (at est. survival ${sv}%). Enter actual bags to back-calculate survival.`,
+    f_biomass: 'Biomass', f_biomass_sub: (n,w) => `tonnes (${n}k fish × ${w}g)`,
+    f_recpacks: 'Rec. Weekly Bags', f_feedcode: 'Feed No. to Use', f_feedcode_sub: (w) => `Based on avg. ${w}g`,
+    f_ratelbll: (r,mn,mx) => `Actual feed rate: <strong style="color:${r.c}">${r.v.toFixed(2)}%</strong>  Rec: ${mn}–${mx}%`,
+    f_low: (v,mn) => `Feed rate low (${v}%), below min ${mn}%. Check for skipped feeding days or abnormal appetite.`,
+    f_high: (v,mx) => `Feed rate high (${v}%), exceeds max ${mx}%×1.15. Likely overfed this week — reduce next week.`,
+    f_slhigh: (v,mx) => `Feed rate slightly high (${v}%), above rec. max ${mx}%, but within tolerance. Monitor for leftover feed.`,
+    f_ok: (v,mn,mx) => `Feed rate normal (${v}%), within ${mn}–${mx}% guideline.`,
+    f_noweight: 'Please enter average fish weight (g).',
+  },
+
+  th: {
+    title: '🐟 เครื่องคำนวณอาหารปลากะพง',
+    tab_calc: '📱 คำนวณรายสัปดาห์', tab_fish: '🐠 ตรวจสอบปลา',
+    tab_table: '📊 ตารางอ้างอิง', tab_guide: '📋 คู่มือ',
+    lbl_settings: 'การตั้งค่าพื้นฐาน', lbl_once: 'กรอกครั้งเดียวต่อรุ่น',
+    lbl_stocked: 'จำนวนลูกปลา (ตัว)', lbl_pkgkg: 'น้ำหนักถุง (กก.)',
+    lbl_week_title: 'เลือกสัปดาห์',
+    wm_stock: 'ปล่อยปลา', wm_f4: 'เปลี่ยนอาหาร 4', wm_f5: 'เปลี่ยนอาหาร 5', wm_f6: 'เปลี่ยนอาหาร 6', wm_harvest: 'เก็บเกี่ยว',
+    lbl_calc_title: 'คำนวณอาหารประจำสัปดาห์',
+    lbl_surv: 'อัตรารอดโดยประมาณ (%)', lbl_actual: 'ถุงที่ให้จริงสัปดาห์นี้ (ไม่บังคับ)',
+    btn_calc: 'คำนวณอาหารสัปดาห์นี้',
+    fish_notice: '📌 กรอกน้ำหนักเฉลี่ยของปลา ระบบจะตรวจสอบอัตราการให้อาหารและเวลาเปลี่ยนอาหาร',
+    lbl_fish_title: 'ข้อมูลปลาและการให้อาหาร',
+    lbl_f_stocked: 'จำนวนลูกปลา (ตัว)', lbl_f_surv: 'อัตรารอดโดยประมาณ (%)',
+    lbl_f_weight: 'น้ำหนักเฉลี่ยสัปดาห์นี้ (ก.)', lbl_f_pkgkg: 'น้ำหนักถุง (กก.)', lbl_f_packs: 'ถุงที่ใช้จริงสัปดาห์นี้',
+    btn_fish: 'ตรวจสอบอัตราการให้อาหาร',
+    lbl_feedcode_title: 'เบอร์อาหารตามน้ำหนักปลา',
+    th_feedcode: 'เบอร์อาหาร', th_fishrange: 'ช่วงน้ำหนักปลา', th_feedrate: 'อัตราแนะนำ', th_pellet: 'ขนาดเม็ด',
+    lbl_table_title: 'ตารางอ้างอิงถุงต่อสัปดาห์',
+    lbl_table_hint: 'พื้นฐาน: 100,000 ตัว · อัตรารอด 100% · 20 กก./ถุง<br><strong>ถุงจริง = ถุงในตาราง × จำนวนลูกปลา × อัตรารอด ÷ 100,000</strong><br>⚡ สัปดาห์ที่ 10–18 โซนควบคุมสำคัญ · <span style="color:var(--amber);font-weight:600">เหลือง = ขั้นต่ำ</span> · <span style="color:var(--red);font-weight:600">แดง = สูงสุด ห้ามเกิน</span>',
+    th_week: 'สัปดาห์', th_feed: 'เบอร์อาหาร', th_fish: 'น้ำหนักปลา (ก.)', th_gfw: 'ก./ตัว/สัปดาห์',
+    th_min: 'ถุงขั้นต่ำ', th_rec: 'ถุงแนะนำ', th_max: 'ถุงสูงสุด',
+    lbl_formula_title: 'สูตรคำนวณ',
+    f1: 'ถุงแนะนำ = ก./ตัว/สัปดาห์ × จำนวนลูกปลา × อัตรารอด ÷ น้ำหนักถุง (ก.)',
+    f2: 'ถุงสูงสุด = ค่าสูงสุดในคู่มือ × จำนวนลูกปลา × อัตรารอด ÷ 100,000',
+    f3: 'อัตราการให้อาหาร% = อาหารต่อวัน (กก.) ÷ ชีวมวล (กก.) × 100',
+    f4: 'ชีวมวล = จำนวนลูกปลา × อัตรารอด × น้ำหนักเฉลี่ย (ก.) ÷ 1,000,000',
+    lbl_steps_title: 'วิธีใช้งาน',
+    s1: 'กรอกจำนวนลูกปลา น้ำหนักถุง และอัตรารอดโดยประมาณ',
+    s2: 'เลื่อนแถบเลือกสัปดาห์ ระบบจะคำนวณจำนวนถุงแนะนำและสูงสุด',
+    s3: 'กรอกจำนวนถุงที่ให้จริง เพื่อคำนวณย้อนหลังอัตรารอด',
+    s4: 'ไปที่ "ตรวจสอบปลา" กรอกน้ำหนักเฉลี่ย เพื่อตรวจสอบอัตราอาหารและเวลาเปลี่ยน',
+    lbl_backcalc_title: 'การคำนวณย้อนหลังอัตรารอด',
+    lbl_backcalc_body: '· สูตร: <strong>ปลารอดโดยประมาณ = ถุงจริง × น้ำหนักถุง (ก.) ÷ ก./ตัว/สัปดาห์</strong><br>· สมมติว่าปลากินอาหารหมดไม่มีเหลือ<br>· หากให้อาหารเกินคำแนะนำ อัตรารอดที่คำนวณย้อนหลังจะสูงเกินจริง<br>· แนะนำใช้ค่าเฉลี่ยหลายสัปดาห์ (สัปดาห์ 5–8) เพื่อความแม่นยำ<br>· เวอร์ชัน Beta ไม่รองรับการบันทึกข้อมูล รอ OMT เวอร์ชันจริง',
+    lbl_warn_title: '⚠ ข้อควรระวัง',
+    w1: '<strong>ถุงสูงสุดคือขีดจำกัดแข็ง</strong> หยุดให้อาหารทันทีไม่ว่าปลาจะกินต่อหรือไม่',
+    w2: 'สัปดาห์เปลี่ยนอาหาร (W2, W7, W12, W18): ปริมาณอาหารลดลงเล็กน้อยเป็นเรื่องปกติ',
+    w3: 'FCR ได้รับผลกระทบจากคุณภาพน้ำ ความเค็ม ความหนาแน่น และคุณภาพลูกปลา การให้อาหารเป็นเพียงปัจจัยหนึ่ง',
+    lbl_hint_bottom: 'เครื่องมือนี้เป็น OMT Beta ไม่รองรับการบันทึกข้อมูลบนคลาวด์ หากมีคำถามโปรดติดต่อตัวแทนบริการด้านเทคนิค',
+    lbl_visits: 'ครั้งที่ใช้งาน',
+    ph_surv: 'เช่น 60', ph_actual: 'วิเคราะห์อัตโนมัติหลังกรอก', ph_weight: 'เช่น 250', ph_packs: 'จำนวนถุง',
+    feed_name: {'2號料':'อาหาร 2','3號料':'อาหาร 3','4號料':'อาหาร 4','5號料':'อาหาร 5','6號料':'อาหาร 6',
+                '2號料+3號料':'อาหาร 2+3','3號料+4號料':'อาหาร 3+4',
+                '4號料+5號料':'อาหาร 4+5','5號料+6號料':'อาหาร 5+6'},
+    feedcode_rows: [
+      ['อาหาร 2','10–30ก.','4.0–5.0%','Φ2.0–2.2mm'],['อาหาร 3','30–120ก.','3.3–3.5%','Φ3.0–3.2mm'],
+      ['อาหาร 4','120–270ก.','3.3–3.5%','Φ4.3–4.7mm'],['อาหาร 5','250–450ก.','1.8–2.0%','Φ6.3–6.7mm'],
+      ['อาหาร 6','450–700ก.','1.3–1.5%','Φ8.8–9.2mm'],
+    ],
+    r_min: (w) => `W${w} ถุงขั้นต่ำ`, r_min_sub: 'ยืนยันหากต่ำกว่านี้',
+    r_rec: (w) => `W${w} ถุงแนะนำ`, r_max: (w) => `W${w} ถุงสูงสุด`, r_max_sub: 'ห้ามเกิน',
+    r_backsuv: 'อัตรารอดย้อนหลัง', r_backsuv_est: (s,d) => `ประมาณ ${s}% (${d})`,
+    r_nextweek: (w) => `สัปดาห์ถัดไป (W${w})`, r_nextweek_sub: (mn,mx) => `ขั้นต่ำ ${mn}  สูงสุด ${mx}`,
+    a_over_title: (a,mx) => `🚫 <strong>สัปดาห์นี้เกินสูงสุด (${a} ถุง &gt; ${mx})</strong>`,
+    a_over_body: (s) => `กรุณาตรวจสอบในสถานที่:<br>&nbsp;&nbsp;① ปลารอดมากกว่าที่ประมาณ (อัตรารอด > ${s}%)<br>&nbsp;&nbsp;② ให้อาหารมากเกินความต้องการของปลา<br>หาก ① เพิ่มอัตรารอดและคำนวณใหม่ หาก ② ลดสัปดาห์หน้า`,
+    a_high: (a,r,mx) => `⚠ สัปดาห์นี้ ${a} ถุง สูงกว่าแนะนำ ${r} ถุง แต่ยังไม่เกินสูงสุด ${mx} ถุง<br>① ปลามากกว่าประมาณ ② ปลากินดี (น้ำดี/เปลี่ยนอาหารผ่านดี)<br>ตรวจสอบว่ามีอาหารเหลือหรือไม่`,
+    a_low_title: (a,mn) => `⚠ <strong>สัปดาห์นี้ต่ำกว่าขั้นต่ำ (${a} ถุง &lt; ${mn})</strong>`,
+    a_low_body: 'กรุณาตรวจสอบในสถานที่:<br>&nbsp;&nbsp;① สภาพอากาศไม่ดี/น้ำมีปัญหา ทำให้ให้อาหารน้อยลง<br>&nbsp;&nbsp;② ปลารอดน้อยกว่าที่ประมาณ<br>&nbsp;&nbsp;③ สัปดาห์เปลี่ยนอาหาร (W2, W7, W12, W18) — เป็นเรื่องปกติ<br>หากไม่ใช่กรณีข้างต้น ติดต่อตัวแทนบริการ',
+    a_ok: (a,mn,mx,sv,d,nr) => `✓ สัปดาห์นี้ปกติ (${a} ถุง ขั้นต่ำ ${mn}–สูงสุด ${mx})<br>อัตรารอดย้อนหลัง ${sv}% ต่างกัน ${d} สัปดาห์หน้าแนะนำ ${nr} ถุง`,
+    a_critical: (w,mn,mx) => `⚡ W${w} เป็นสัปดาห์ควบคุมสำคัญ รักษาขั้นต่ำ ${mn}–สูงสุด ${mx} ถุง กรอกถุงจริงเพื่อคำนวณอัตรารอด`,
+    a_normal: (mn,r,mx,sv) => `สัปดาห์นี้: <strong>ขั้นต่ำ ${mn} ถุง แนะนำ ${r} ถุง สูงสุด ${mx} ถุง</strong> (อัตรารอดประมาณ ${sv}%) กรอกถุงจริงเพื่อคำนวณอัตรารอด`,
+    f_biomass: 'ชีวมวล', f_biomass_sub: (n,w) => `ตัน (${n}k ตัว × ${w}ก.)`,
+    f_recpacks: 'ถุงแนะนำต่อสัปดาห์', f_feedcode: 'เบอร์อาหารที่ควรใช้', f_feedcode_sub: (w) => `จากน้ำหนักเฉลี่ย ${w}ก.`,
+    f_ratelbll: (r,mn,mx) => `อัตราให้อาหารจริง: <strong style="color:${r.c}">${r.v.toFixed(2)}%</strong>  แนะนำ: ${mn}–${mx}%`,
+    f_low: (v,mn) => `อัตราให้อาหารต่ำ (${v}%) ต่ำกว่าขั้นต่ำ ${mn}% ตรวจสอบวันที่ไม่ได้ให้อาหารหรือปลากินน้อย`,
+    f_high: (v,mx) => `อัตราให้อาหารสูง (${v}%) เกินสูงสุด ${mx}%×1.15 อาจให้มากเกินไปสัปดาห์นี้ ลดสัปดาห์หน้า`,
+    f_slhigh: (v,mx) => `อัตราให้อาหารสูงเล็กน้อย (${v}%) เกินแนะนำ ${mx}% แต่ยังอยู่ในเกณฑ์ ติดตามอาหารเหลือ`,
+    f_ok: (v,mn,mx) => `อัตราให้อาหารปกติ (${v}%) อยู่ในช่วง ${mn}–${mx}% ที่แนะนำ`,
+    f_noweight: 'กรุณากรอกน้ำหนักเฉลี่ยของปลา (ก.)',
+  }
+};
+
+let currentLang = 'zh';
+function detectLang() {
+  const l = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  if (l.startsWith('th')) return 'th';
+  if (l.startsWith('en')) return 'en';
+  return 'zh';
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  applyLang();
+}
+
+function applyLang() {
+  const t = LANG[currentLang];
+  const s = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = v; };
+  s('hdr-title', t.title);
+  s('tab-calc', t.tab_calc); s('tab-fish', t.tab_fish);
+  s('tab-table', t.tab_table); s('tab-guide', t.tab_guide);
+  s('lbl-settings', t.lbl_settings); s('lbl-once', t.lbl_once);
+  s('lbl-stocked', t.lbl_stocked); s('lbl-pkgkg', t.lbl_pkgkg);
+  s('lbl-week-title', t.lbl_week_title);
+  s('wm-stock', t.wm_stock); s('wm-f4', t.wm_f4); s('wm-f5', t.wm_f5);
+  s('wm-f6', t.wm_f6); s('wm-harvest', t.wm_harvest);
+  s('lbl-calc-title', t.lbl_calc_title);
+  s('lbl-surv', t.lbl_surv); s('lbl-actual', t.lbl_actual);
+  s('btn-calc', t.btn_calc);
+  s('fish-notice', t.fish_notice);
+  s('lbl-fish-title', t.lbl_fish_title);
+  s('lbl-f-stocked', t.lbl_f_stocked); s('lbl-f-surv', t.lbl_f_surv);
+  s('lbl-f-weight', t.lbl_f_weight); s('lbl-f-pkgkg', t.lbl_f_pkgkg); s('lbl-f-packs', t.lbl_f_packs);
+  s('btn-fish', t.btn_fish);
+  s('lbl-feedcode-title', t.lbl_feedcode_title);
+  s('th-feedcode', t.th_feedcode); s('th-fishrange', t.th_fishrange);
+  s('th-feedrate', t.th_feedrate); s('th-pellet', t.th_pellet);
+  s('lbl-table-title', t.lbl_table_title);
+  s('lbl-table-hint', t.lbl_table_hint);
+  s('th-week', t.th_week); s('th-feed', t.th_feed); s('th-fish', t.th_fish);
+  s('th-gfw', t.th_gfw); s('th-min', t.th_min); s('th-rec', t.th_rec); s('th-max', t.th_max);
+  s('lbl-formula-title', t.lbl_formula_title);
+  s('f1', t.f1); s('f2', t.f2); s('f3', t.f3); s('f4', t.f4);
+  s('lbl-steps-title', t.lbl_steps_title);
+  s('s1', t.s1); s('s2', t.s2); s('s3', t.s3); s('s4', t.s4);
+  s('lbl-backcalc-title', t.lbl_backcalc_title);
+  s('lbl-backcalc-body', t.lbl_backcalc_body);
+  s('lbl-warn-title', t.lbl_warn_title);
+  s('w1', t.w1); s('w2', t.w2); s('w3', t.w3);
+  s('lbl-hint-bottom', t.lbl_hint_bottom);
+  s('lbl-visits', t.lbl_visits);
+  // placeholders
+  const ph = (id, v) => { const el=document.getElementById(id); if(el) el.placeholder=v; };
+  ph('survRate', t.ph_surv);
+  ph('actualPacks', t.ph_actual);
+  ph('f_weight', t.ph_weight);
+  ph('f_packs', t.ph_packs);
+  // rebuild feedcode table body (page-fish)
+  const ftbody = document.getElementById('feedcode-tbody');
+  if (ftbody) {
+    ftbody.innerHTML = t.feedcode_rows.map(r =>
+      `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`
+    ).join('');
+  }
+  // rebuild speed-ref table with translated feed names
+  buildRef();
+  calcMain();
+}
+
+// ── 頁面切換 ─────────────────────────────────────────────────────
 function switchTab(t, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -359,7 +637,9 @@ function switchTab(t, btn) {
   document.getElementById('page-' + t).classList.add('active');
 }
 
+// ── 本週換算 ─────────────────────────────────────────────────────
 function calcMain() {
+  const T = LANG[currentLang];
   const stocked  = +document.getElementById('stocked').value  || 75000;
   const pkgkg    = +document.getElementById('pkgkg').value    || 20;
   const pkgG     = pkgkg * 1000;
@@ -374,86 +654,70 @@ function calcMain() {
   const recPacks = Math.round(g[2] * estFish / pkgG);
   const minPacks = Math.round(g[0] * scale);
   const maxPacks = Math.round(g[1] * scale);
+
   let html = `<div class="result-grid-3">
     <div class="result-box">
-      <div class="result-lbl">W${w} 下限包數</div>
+      <div class="result-lbl">${T.r_min(w)}</div>
       <div class="result-val" style="color:var(--amber)">${minPacks}</div>
-      <div class="result-sub">低於此數需確認</div>
+      <div class="result-sub">${T.r_min_sub}</div>
     </div>
     <div class="result-box">
-      <div class="result-lbl">W${w} 建議包數</div>
+      <div class="result-lbl">${T.r_rec(w)}</div>
       <div class="result-val" style="color:var(--blue)">${recPacks}</div>
-      <div class="result-sub">${g[2]}g/尾 · ${g[4]}</div>
+      <div class="result-sub">${g[2]}g · ${g[4]}</div>
     </div>
     <div class="result-box">
-      <div class="result-lbl">W${w} 上限包數</div>
+      <div class="result-lbl">${T.r_max(w)}</div>
       <div class="result-val" style="color:var(--red)">${maxPacks}</div>
-      <div class="result-sub">不可超過此數</div>
+      <div class="result-sub">${T.r_max_sub}</div>
     </div>`;
+
   if (actual > 0) {
-    const estFishBack  = actual * pkgG / gPerFish;
-    const estSurvBack  = (estFishBack / stocked * 100).toFixed(0);
-    const diff         = estFishBack / stocked * 100 - survRate * 100;
-    const diffStr      = diff >= 0 ? `+${diff.toFixed(0)}%` : `${diff.toFixed(0)}%`;
-    const diffColor    = Math.abs(diff) <= 5 ? 'var(--green)' : diff > 0 ? 'var(--amber)' : 'var(--red)';
-    const nextIdx   = Math.min(idx + 1, 25);
-    const nextG     = GUIDE[nextIdx];
-    const nextScale = (estFishBack / BASE) * (BASE_PKG_G / pkgG);
-    const nextRec   = Math.round(nextG[2] * estFishBack / pkgG);
-    const nextMin   = Math.round(nextG[0] * nextScale);
-    const nextMax   = Math.round(nextG[1] * nextScale);
+    const estFishBack = actual * pkgG / gPerFish;
+    const estSurvBack = (estFishBack / stocked * 100).toFixed(0);
+    const diff        = estFishBack / stocked * 100 - survRate * 100;
+    const diffStr     = diff >= 0 ? `+${diff.toFixed(0)}%` : `${diff.toFixed(0)}%`;
+    const diffColor   = Math.abs(diff) <= 5 ? 'var(--green)' : diff > 0 ? 'var(--amber)' : 'var(--red)';
+    const nextIdx  = Math.min(idx + 1, 25);
+    const nextG    = GUIDE[nextIdx];
+    const nextScale= (estFishBack / BASE) * (BASE_PKG_G / pkgG);
+    const nextRec  = Math.round(nextG[2] * estFishBack / pkgG);
+    const nextMin  = Math.round(nextG[0] * nextScale);
+    const nextMax  = Math.round(nextG[1] * nextScale);
     html += `
     <div class="result-box">
-      <div class="result-lbl">反推存活率</div>
+      <div class="result-lbl">${T.r_backsuv}</div>
       <div class="result-val" style="color:${diffColor};font-size:20px">${estSurvBack}%</div>
-      <div class="result-sub">預估 ${(survRate*100).toFixed(0)}%（${diffStr}）</div>
+      <div class="result-sub">${T.r_backsuv_est(survRate*100|0, diffStr)}</div>
     </div>
     <div class="result-box">
-      <div class="result-lbl">下週（W${Math.min(w+1,26)}）建議</div>
+      <div class="result-lbl">${T.r_nextweek(Math.min(w+1,26))}</div>
       <div class="result-val" style="color:var(--blue);font-size:20px">${nextRec}</div>
-      <div class="result-sub">下限 ${nextMin}　上限 ${nextMax}</div>
+      <div class="result-sub">${T.r_nextweek_sub(nextMin, nextMax)}</div>
     </div></div>`;
     if (actual > maxPacks) {
-      html += `<div class="alert alert-red">
-        🚫 <strong>本週超過上限（${actual} 包 &gt; ${maxPacks} 包）</strong><br>
-        可能原因，請現場確認：<br>
-        &nbsp;&nbsp;① 實際存活魚數比預估多（存活率高於 ${(survRate*100).toFixed(0)}%）<br>
-        &nbsp;&nbsp;② 投餵過量，魚已超出實際需求<br>
-        若確認是①，請調高存活率重新計算；若是②，下週主動降回建議包數。
-      </div>`;
+      html += `<div class="alert alert-red">${T.a_over_title(actual,maxPacks)}<br>${T.a_over_body((survRate*100|0))}</div>`;
     } else if (actual > recPacks) {
-      html += `<div class="alert alert-amber">
-        ⚠ 本週 ${actual} 包，高於建議 ${recPacks} 包，仍在上限 ${maxPacks} 包內。<br>
-        可能原因：① 實際魚數略多於預估　② 魚攝食旺盛（水溫適合、換料適應良好）<br>
-        留意是否有剩料沉底，若無剩料則屬正常。
-      </div>`;
+      html += `<div class="alert alert-amber">${T.a_high(actual, recPacks, maxPacks)}</div>`;
     } else if (actual < minPacks) {
-      html += `<div class="alert alert-amber">
-        ⚠ <strong>本週低於下限（${actual} 包 &lt; ${minPacks} 包）</strong><br>
-        可能原因，請現場確認：<br>
-        &nbsp;&nbsp;① 天氣不佳、水質異常導致停餵或減餵<br>
-        &nbsp;&nbsp;② 實際存活魚數比預估少（死魚較多）<br>
-        &nbsp;&nbsp;③ 換料週過渡期，屬正常現象（W2、W7、W12、W18）<br>
-        若非以上原因，建議聯絡技術服務代表確認。
-      </div>`;
+      html += `<div class="alert alert-amber">${T.a_low_title(actual,minPacks)}<br>${T.a_low_body}</div>`;
     } else {
-      html += `<div class="alert alert-green">
-        ✓ 本週投餵正常（${actual} 包，下限 ${minPacks}～上限 ${maxPacks}）<br>
-        反推存活率 ${estSurvBack}%，與預估 ${(survRate*100).toFixed(0)}% 差距 ${diffStr}，下週建議 ${nextRec} 包。
-      </div>`;
+      html += `<div class="alert alert-green">${T.a_ok(actual, minPacks, maxPacks, estSurvBack, diffStr, nextRec)}</div>`;
     }
   } else {
     html += `</div>`;
     if (w >= 10 && w <= 18) {
-      html += `<div class="alert alert-amber" style="margin-top:8px">⚡ W${w} 為關鍵管控週次，請嚴守下限 ${minPacks}、上限 ${maxPacks} 包。填入實際包數可反推存活率。</div>`;
+      html += `<div class="alert alert-amber" style="margin-top:8px">${T.a_critical(w, minPacks, maxPacks)}</div>`;
     } else {
-      html += `<div class="alert alert-blue" style="margin-top:8px">本週 <strong>下限 ${minPacks} 包、建議 ${recPacks} 包、上限 ${maxPacks} 包</strong>（以預估存活率 ${(survRate*100).toFixed(0)}% 換算）。填入實際包數可反推存活率。</div>`;
+      html += `<div class="alert alert-blue" style="margin-top:8px">${T.a_normal(minPacks, recPacks, maxPacks, (survRate*100|0))}</div>`;
     }
   }
   document.getElementById('calcResult').innerHTML = html;
 }
 
+// ── 魚體驗算 ─────────────────────────────────────────────────────
 function calcFish() {
+  const T = LANG[currentLang];
   const stocked  = +document.getElementById('f_stocked').value || 75000;
   const survRate = (+document.getElementById('f_surv').value   || 60) / 100;
   const weight   = +document.getElementById('f_weight').value  || 0;
@@ -461,69 +725,60 @@ function calcFish() {
   const packs    = +document.getElementById('f_packs').value   || 0;
   const pkgG     = pkgkg * 1000;
   if (!weight) {
-    document.getElementById('fishResult').innerHTML =
-      '<div class="alert alert-amber">請填入當週魚體均重（g）</div>';
+    document.getElementById('fishResult').innerHTML = `<div class="alert alert-amber">${T.f_noweight}</div>`;
     return;
   }
-  const estFish    = stocked * survRate;
-  const biomassKg  = estFish * weight / 1000;
-  const dailyKg    = packs > 0 ? packs * pkgkg / 7 : null;
-  const actualRate = dailyKg ? (dailyKg / biomassKg * 100) : null;
-  let feedCode, rateMin, rateMax;
-  if      (weight < 30)  { feedCode='2號料';  rateMin=4.0; rateMax=5.0; }
-  else if (weight < 120) { feedCode='3號料';  rateMin=3.3; rateMax=3.5; }
-  else if (weight < 250) { feedCode='4號料';  rateMin=3.3; rateMax=3.5; }
-  else if (weight < 450) { feedCode='5號料';  rateMin=1.8; rateMax=2.0; }
-  else if (weight < 700) { feedCode='6號料';  rateMin=1.3; rateMax=1.5; }
-  else                   { feedCode='6號料';  rateMin=1.3; rateMax=1.5; }
-  const recDailyKg_low      = biomassKg * rateMin / 100;
-  const recDailyKg_high     = biomassKg * rateMax / 100;
-  const recWeeklyPacks_low  = Math.round(recDailyKg_low  * 7 / pkgkg);
-  const recWeeklyPacks_high = Math.round(recDailyKg_high * 7 / pkgkg);
+  const estFish   = stocked * survRate;
+  const biomassKg = estFish * weight / 1000;
+  const dailyKg   = packs > 0 ? packs * pkgkg / 7 : null;
+  const actualRate= dailyKg ? (dailyKg / biomassKg * 100) : null;
+  let feedCodeKey, rateMin, rateMax;
+  if      (weight < 30)  { feedCodeKey='2號料'; rateMin=4.0; rateMax=5.0; }
+  else if (weight < 120) { feedCodeKey='3號料'; rateMin=3.3; rateMax=3.5; }
+  else if (weight < 250) { feedCodeKey='4號料'; rateMin=3.3; rateMax=3.5; }
+  else if (weight < 450) { feedCodeKey='5號料'; rateMin=1.8; rateMax=2.0; }
+  else                   { feedCodeKey='6號料'; rateMin=1.3; rateMax=1.5; }
+  const feedCode = T.feed_name[feedCodeKey] || feedCodeKey;
+  const recLow  = Math.round(biomassKg * rateMin / 100 * 7 / pkgkg);
+  const recHigh = Math.round(biomassKg * rateMax / 100 * 7 / pkgkg);
   let html = `<div class="result-grid-3">
     <div class="result-box">
-      <div class="result-lbl">池中生物量</div>
+      <div class="result-lbl">${T.f_biomass}</div>
       <div class="result-val" style="color:var(--blue);font-size:18px">${biomassKg.toFixed(1)}</div>
-      <div class="result-sub">公噸（${(estFish/1000).toFixed(1)}k尾 × ${weight}g）</div>
+      <div class="result-sub">${T.f_biomass_sub((estFish/1000).toFixed(1), weight)}</div>
     </div>
     <div class="result-box">
-      <div class="result-lbl">建議週投包數</div>
-      <div class="result-val" style="color:var(--blue);font-size:18px">${recWeeklyPacks_low}–${recWeeklyPacks_high}</div>
-      <div class="result-sub">${feedCode}<br>${rateMin}–${rateMax}% BW/天</div>
+      <div class="result-lbl">${T.f_recpacks}</div>
+      <div class="result-val" style="color:var(--blue);font-size:18px">${recLow}–${recHigh}</div>
+      <div class="result-sub">${feedCode}<br>${rateMin}–${rateMax}% BW/d</div>
     </div>
     <div class="result-box">
-      <div class="result-lbl">應使用料號</div>
+      <div class="result-lbl">${T.f_feedcode}</div>
       <div class="result-val" style="color:var(--green);font-size:16px">${feedCode}</div>
-      <div class="result-sub">依均重 ${weight}g 判斷</div>
+      <div class="result-sub">${T.f_feedcode_sub(weight)}</div>
     </div>
   </div>`;
   if (packs > 0 && actualRate !== null) {
     let rateColor, rateMsg, rateAlert;
+    const rv = actualRate.toFixed(2);
     if (actualRate < rateMin * 0.8) {
-      rateColor='var(--amber)'; rateAlert='alert-amber';
-      rateMsg=`投料率偏低（${actualRate.toFixed(2)}%），低於建議下限 ${rateMin}%，確認是否有停餵天數或魚群攝食異常。`;
+      rateColor='var(--amber)'; rateAlert='alert-amber'; rateMsg=T.f_low(rv, rateMin);
     } else if (actualRate > rateMax * 1.15) {
-      rateColor='var(--red)'; rateAlert='alert-red';
-      rateMsg=`投料率偏高（${actualRate.toFixed(2)}%），超過建議上限 ${rateMax}%×1.15，本週可能過量，建議下週降量。`;
+      rateColor='var(--red)'; rateAlert='alert-red'; rateMsg=T.f_high(rv, rateMax);
     } else if (actualRate > rateMax) {
-      rateColor='var(--amber)'; rateAlert='alert-amber';
-      rateMsg=`投料率略高（${actualRate.toFixed(2)}%），超出建議上限 ${rateMax}%，但仍在可接受範圍，留意殘餌。`;
+      rateColor='var(--amber)'; rateAlert='alert-amber'; rateMsg=T.f_slhigh(rv, rateMax);
     } else {
-      rateColor='var(--green)'; rateAlert='alert-green';
-      rateMsg=`投料率正常（${actualRate.toFixed(2)}%），符合 ${rateMin}–${rateMax}% 建議範圍。`;
+      rateColor='var(--green)'; rateAlert='alert-green'; rateMsg=T.f_ok(rv, rateMin, rateMax);
     }
-    const barPct   = Math.min(100, actualRate / (rateMax * 1.3) * 100);
-    const barColor = rateAlert==='alert-green'?'var(--green)':rateAlert==='alert-red'?'var(--red)':'var(--amber)';
+    const barPct  = Math.min(100, actualRate / (rateMax * 1.3) * 100);
+    const barColor= rateAlert==='alert-green'?'var(--green)':rateAlert==='alert-red'?'var(--red)':'var(--amber)';
     html += `<div style="margin-top:10px">
       <div style="font-size:11px;color:var(--text2);margin-bottom:4px">
-        實際投料率：<strong style="color:${rateColor}">${actualRate.toFixed(2)}%</strong>
-        　建議：${rateMin}–${rateMax}%
+        ${T.f_ratelbll({c:rateColor,v:actualRate}, rateMin, rateMax)}
       </div>
       <div class="fcr-meter">
         <span style="font-size:10px;color:var(--text2)">${rateMin}%</span>
-        <div class="fcr-bar-bg">
-          <div class="fcr-bar-fill" style="width:${barPct}%;background:${barColor}"></div>
-        </div>
+        <div class="fcr-bar-bg"><div class="fcr-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
         <span style="font-size:10px;color:var(--text2)">${rateMax}%</span>
       </div>
     </div>
@@ -532,17 +787,21 @@ function calcFish() {
   document.getElementById('fishResult').innerHTML = html;
 }
 
-(function buildRef() {
+// ── 速查表 ───────────────────────────────────────────────────────
+function buildRef() {
+  const T = LANG[currentLang];
   const tbody = document.getElementById('refTbody');
+  tbody.innerHTML = '';
   GUIDE.forEach((g, i) => {
     const w = i + 1;
     const isKey = w >= 10 && w <= 18;
     const tr = document.createElement('tr');
     if (isKey) tr.classList.add('key-row');
+    const feedDisplay = T.feed_name[g[4]] || g[4];
     tr.innerHTML = `
       <td>${isKey ? '⚡' : ''} W${w}</td>
       <td style="font-size:10px">${g[3]}</td>
-      <td style="font-size:10px">${g[4]}</td>
+      <td style="font-size:10px">${feedDisplay}</td>
       <td style="font-size:10px">${g[5]}</td>
       <td>${g[2]}</td>
       <td style="color:var(--amber);font-weight:600">${g[0]}</td>
@@ -550,17 +809,17 @@ function calcFish() {
       <td class="upper-val">${g[1]}</td>`;
     tbody.appendChild(tr);
   });
-})();
+}
 
 window.addEventListener('DOMContentLoaded', function () {
-  calcMain();
-  // Visitor counter
+  currentLang = detectLang();
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.lang-btn[onclick="setLang('${currentLang}')"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  applyLang();
   fetch('https://api.counterapi.dev/v1/omt-seabass/beta-visits/up')
     .then(r => r.json())
-    .then(d => {
-      const el = document.getElementById('vc-num');
-      if (el && d.count) el.textContent = d.count.toLocaleString();
-    })
+    .then(d => { const el=document.getElementById('vc-num'); if(el&&d.count) el.textContent=d.count.toLocaleString(); })
     .catch(() => {});
 });
 </script>
